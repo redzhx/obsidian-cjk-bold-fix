@@ -11,13 +11,13 @@ An [Obsidian](https://obsidian.md) plugin that fixes **bold** and *italic* rende
 **v1.0.1-patch1** adds a fix for lines that contain both CJK and English emphasis:
 
 ```markdown
-**大文件与文本文件要分开处理。**PDF、PPT 直接进版本库。大文件走**Git LFS**。
+**重要提示。**后面的正文需要正常显示，其中**GitHub**需要加粗。
 ```
 
-- **Before**: only `大文件与文本文件要分开处理。` renders bold — `Git LFS` is flattened to normal weight.
+- **Before**: only `重要提示。` renders bold — `GitHub` is flattened to normal weight.
 - **After**: **both** render bold correctly.
 
-**Root cause**: the plugin collects "correct" emphasis matches only when the matched content itself is CJK-related (`isCJKRelated(inner)`). Pure-English emphasis such as `**Git LFS**` is skipped, so when the parser mis-parses the whole line as bold (CommonMark flanking issue), Phase 3's override range flattens the English bold along with the rest of the line.
+**Root cause**: the plugin collects "correct" emphasis matches only when the matched content itself is CJK-related (`isCJKRelated(inner)`). Pure-English emphasis such as `**GitHub**` is skipped, so when the parser mis-parses the whole line as bold (CommonMark flanking issue), Phase 3's override range flattens the English bold along with the rest of the line.
 
 **Fix**: accept a match when either the inner content **or the whole line** is CJK-related (`isCJKRelated(inner) && isCJKRelated(lineText)`), applied to all three regex loops (bold, italic, bold+italic). Pure-English lines are unaffected — no CJK in the line means matches are still skipped, exactly as upstream behaves.
 
