@@ -31,16 +31,30 @@ COUNT=$(grep -c "!isCJKRelated(inner) && !isCJKRelated(lineText)" src/extension.
 echo "    补丁位置数：$COUNT（应为 3）"
 [ "$COUNT" -eq 3 ] || { echo "    错误：补丁数量异常，中止"; exit 1; }
 
+echo "==> [2.5/5] 重打 Cmd+B 切换补丁（幂等：已打过则跳过）"
+if grep -q "cjkSafeToggleBold" src/main.ts; then
+  echo "    切换补丁已存在，跳过"
+else
+  if [ -f patches/0001-toggle-bold-cjk-fix.patch ]; then
+    git apply patches/0001-toggle-bold-cjk-fix.patch
+    echo "    已应用切换补丁"
+  else
+    echo "    错误：patches/0001-toggle-bold-cjk-fix.patch 不存在，中止"
+    exit 1
+  fi
+fi
+grep -c "cjkSafeToggleBold" src/main.ts | xargs -I{} echo "    切换补丁位置数：{}（应为 1）"
+
 echo "==> [3/5] 安装依赖并构建"
 npm install --legacy-peer-deps >/dev/null 2>&1
 npm run build
 
 echo "==> [4/5] 语法验证"
 node --check main.js && echo "    main.js 语法 OK"
-grep -c "if(!b(E)&&!b(f))continue" main.js | xargs -I{} echo "    main.js 补丁数：{}（应为 3）"
+grep -c "if(!b(E)&&!b(f))continue" main.js | xargs -I{} echo "    main.js 正则补丁数：{}（应为 3）"
+grep -c "cjkSafeToggleBold" main.js | xargs -I{} echo "    main.js 切换补丁数：{}（应为 1）"
 
 echo "==> [5/5] 完成"
 echo "    下一步："
-echo "      git push origin main"
-echo "      更新 manifest.json 版本号后提交推送"
-echo "      gh release create v1.0.1-patchN main.js manifest.json --repo redzhx/obsidian-cjk-bold-fix"
+echo "      git add -A && git commit && git push origin main"
+echo "      gh release create v1.0.1-patch2 main.js manifest.json --repo redzhx/obsidian-cjk-bold-fix"
