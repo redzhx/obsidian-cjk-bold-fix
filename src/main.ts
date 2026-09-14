@@ -24,12 +24,12 @@ function cjkSafeToggleBold(editor: Editor): boolean {
 	const sel = editor.getRange(from, to);
 
 	const apply = (fn: () => void) => {
-		// Batch into one undo stop when the editor supports transaction()
-		if (typeof (editor as any).transaction === "function") {
-			(editor as any).transaction(fn);
-		} else {
-			fn();
-		}
+		// NOTE: Obsidian's CodeMirrorEditor.transaction() takes a spec OBJECT
+		// ({changes, selection}), not a callback — passing a function dispatches
+		// an empty change and nothing happens. Run the primitive operations
+		// synchronously instead; each replaceRange/setSelection is its own CM6
+		// dispatch, which is correct (undo may be split into two steps).
+		fn();
 	};
 
 	// 1) Selection is fully inside a **...** pair (single line) → unwrap that pair.
