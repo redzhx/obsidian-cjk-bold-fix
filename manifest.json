@@ -1,7 +1,7 @@
 {
 	"id": "cjk-bold-fix",
 	"name": "CJK Bold Fix",
-	"version": "1.0.1-patch2",
+	"version": "1.0.1-patch3",
 	"minAppVersion": "0.15.0",
 	"description": "Fixes CJK (Chinese/Japanese/Korean) bold and italic rendering in Live Preview mode.",
 	"author": "ebibibi",

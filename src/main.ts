@@ -21,10 +21,6 @@ function cjkSafeToggleBold(editor: Editor): boolean {
 		}
 	}
 
-	const lineFrom = editor.getLine(from.line);
-	const lineTo = editor.getLine(to.line);
-	const before = lineFrom.slice(0, from.ch);
-	const after = lineTo.slice(to.ch);
 	const sel = editor.getRange(from, to);
 
 	const apply = (fn: () => void) => {
@@ -36,20 +32,33 @@ function cjkSafeToggleBold(editor: Editor): boolean {
 		}
 	};
 
-	// 1) Selection is inside **...** → unwrap (remove only the two adjacent markers)
-	if (!empty && before.endsWith("**") && after.startsWith("**")) {
-		const nfrom = { line: from.line, ch: from.ch - 2 };
-		const nrmTo = { line: to.line, ch: to.ch + 2 };
-		const nto = { line: to.line, ch: to.ch - 2 };
-		apply(() => {
-			editor.replaceRange(sel, nfrom, nrmTo);
-			editor.setSelection(nfrom, nto);
-		});
-		return true;
+	// 1) Selection is fully inside a **...** pair (single line) → unwrap that pair.
+	//    Regex over the whole line: ordinary text sandwiched between two bold
+	//    spans (e.g. the "乙" in **甲**乙**丙**) is NOT inside any pair and gets
+	//    wrapped below, instead of wrongly unwrapping the neighbouring bold.
+	if (!empty && from.line === to.line) {
+		const lineText = editor.getLine(from.line);
+		const pairRe = /\*\*(.+?)\*\*/g;
+		let m: RegExpExecArray | null;
+		while ((m = pairRe.exec(lineText)) !== null) {
+			const cFrom = m.index + 2;
+			const cTo = m.index + m[0].length - 2;
+			if (from.ch >= cFrom && to.ch <= cTo) {
+				const unwrapped = lineText.slice(cFrom, cTo);
+				// Capture match positions outside the closure (TS narrowing)
+				const mk = m.index;
+				const mkEnd = m.index + m[0].length;
+				apply(() => {
+					editor.replaceRange(unwrapped, { line: from.line, ch: mk }, { line: from.line, ch: mkEnd });
+					editor.setSelection({ line: from.line, ch: mk }, { line: from.line, ch: mk + cTo - cFrom });
+				});
+				return true;
+			}
+		}
 	}
 	// 2) Selection includes the ** markers → strip them
 	if (sel.startsWith("**") && sel.endsWith("**") && sel.length > 4) {
-		const nto = { line: to.line, ch: to.ch - 2 };
+		const nto = { line: to.line, ch: from.ch + sel.length - 4 };
 		apply(() => {
 			editor.replaceRange(sel.slice(2, -2), from, to);
 			editor.setSelection(from, nto);
